@@ -34,6 +34,39 @@ Cumulative distribution function of normal distribution.
 - `o`: standard deviation in WAD
 - Returns: cumulative probability in WAD (0 to 1)
 
+## Gas Benchmarks
+
+Run benchmarks: `python3 scripts/gas_benchmark.py`
+
+### Comparison: vygauss (Vyper) vs solgauss (Solidity)
+
+| Function | vygauss (min) | vygauss (max) | solgauss (min) | solgauss (max) | Overhead |
+|----------|---------------|---------------|----------------|----------------|----------|
+| erfc     | 2688          | 2736          | 649            | 693            | ~4x      |
+| erfinv   | 1643          | 7670          | 647            | 1670           | ~2.5-4.5x|
+| erfcinv  | 2860          | 7774          | 710            | 723            | ~4-10x   |
+| cdf      | 2997          | 3045          | 731            | 754            | ~4x      |
+| ppf      | 2105          | 3218          | 814            | 859            | ~2.5-4x  |
+
+### vygauss Detailed Benchmarks
+
+| Function              | min  | max  | avg  | median |
+|-----------------------|------|------|------|--------|
+| erfc                  | 2688 | 2736 | 2702 | 2688   |
+| erfinv (Range 1)      | 2717 | 2756 | 2723 | 2717   |
+| erfinv (Range 2)      | 1643 | 1682 | 1662 | 1662   |
+| erfinv (Range 3)      | 7631 | 7670 | 7638 | 7631   |
+| erfcinv               | 2860 | 7774 | 3578 | 2899   |
+| cdf                   | 2997 | 3045 | 3024 | 3045   |
+| ppf                   | 2105 | 3218 | 2888 | 3179   |
+
+The gas overhead compared to Solidity is due to:
+- Vyper's lack of inline assembly support
+- Additional safety checks in Vyper
+- Less aggressive compiler optimizations
+
+For gas-critical applications, consider using [solgauss](https://github.com/cairoeth/solgauss). For Vyper-native projects prioritizing code readability and safety, vygauss provides functionally equivalent results.
+
 ## Testing
 
 ```sh
