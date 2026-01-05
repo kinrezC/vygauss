@@ -1,0 +1,38 @@
+[project]
+name = "vygauss"
+version = "0.1.0"
+description = "Highly optimized Vyper library for statistical functions with error < 1e-8"
+authors = [{ name = "vygauss contributors" }]
+requires-python = ">=3.10"
+dependencies = [
+    "vyper>=0.4.0",
+    "pytest>=8.0.0",
+    "pytest-xdist>=3.5.0",
+    "eth-ape>=0.8.0",
+    "ape-vyper>=0.8.0",
+    "hypothesis>=6.100.0",
+    "mpmath>=1.3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black>=24.0.0",
+    "ruff>=0.3.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
