@@ -44,22 +44,22 @@ titanoboa measures external calls (~118 gas overhead). Values below are pure com
 
 | Function | solgauss | std | std vs sol | Venom | Venom vs sol |
 |----------|----------|-----|------------|-------|--------------|
-| erfc     | 688      | 912 | +33%       | 617   | **-10%**     |
-| erfcinv  | 828      | 1291| +56%       | 893   | +8%          |
-| cdf      | 610      | 1234| +102%      | 866   | +42%         |
-| ppf      | 2001     | 1222| -39%       | 933   | **-53%**     |
+| erfc     | 688      | 779 | +13%       | 503   | **-27%**     |
+| erfcinv  | 828      | 1218| +47%       | 829   | 0%           |
+| cdf      | 610      | 893 | +46%       | 585   | **-4%**      |
+| ppf      | 2001     | 946 | -53%       | 672   | **-66%**     |
 
 ### Detailed Benchmarks (Venom, total gas including call overhead)
 
 | Function | min | max | avg | median |
 |----------|-----|-----|-----|--------|
-| erfc | 727 | 755 | 735 | 727 |
+| erfc | 620 | 626 | 621 | 620 |
 | erfinv (Range 1) | 675 | 705 | 680 | 675 |
 | erfinv (Range 2) | 572 | 602 | 587 | 587 |
-| erfinv (Range 3) | 2265 | 2295 | 2271 | 2265 |
-| erfcinv | 771 | 2361 | 1011 | 801 |
-| cdf | 968 | 996 | 984 | 996 |
-| ppf | 965 | 1098 | 1051 | 1068 |
+| erfinv (Range 3) | 2090 | 2120 | 2096 | 2090 |
+| erfcinv | 732 | 2147 | 947 | 762 |
+| cdf | 700 | 706 | 703 | 706 |
+| ppf | 704 | 837 | 790 | 807 |
 
 ### Optimization Techniques
 

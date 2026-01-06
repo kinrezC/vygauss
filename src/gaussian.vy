@@ -265,10 +265,10 @@ def _erfc_internal(x: int256) -> uint256:
         denom = unsafe_sub((unsafe_mul(denom, z) >> POW), ERFC_DEN_2)
         denom = unsafe_add((unsafe_mul(denom, z) >> POW), ERFC_DEN_3)
 
-        y = convert((ERFC_SCALE * num) // denom, uint256)
-    
+        y = convert(unsafe_div(unsafe_mul(ERFC_SCALE, num), denom), uint256)
+
     if x < 0:
-        y = TWO - y
+        y = unsafe_sub(TWO, y)
     
     return y
 
@@ -317,16 +317,11 @@ def _erfinv_internal(x: int256) -> int256:
     else:
         z_scaled: int256 = unsafe_div(unsafe_mul(z, ONE_SIGNED), POW96_VAL)
 
-        one_minus_z: uint256 = convert(ONE_SIGNED - z_scaled, uint256)
-        if one_minus_z == 0:
-            one_minus_z = 1
-
+        one_minus_z: uint256 = convert(unsafe_sub(ONE_SIGNED, z_scaled), uint256)
         ln_val: int256 = self._ln_wad(convert(one_minus_z, int256))
-        under_sqrt: int256 = LN2_WAD - ln_val
-        if under_sqrt < 0:
-            under_sqrt = 0
+        under_sqrt: uint256 = convert(unsafe_sub(LN2_WAD, ln_val), uint256)
 
-        r: int256 = convert(self._sqrt(convert(under_sqrt, uint256) * ONE), int256)
+        r: int256 = convert(self._sqrt(unsafe_mul(under_sqrt, ONE)), int256)
         r = unsafe_sub(r, 1600000000000000000)
 
         num: int256 = unsafe_add(unsafe_div(unsafe_mul(ERFINV3_NUM_0, r), ONE_SIGNED), ERFINV3_NUM_1)
@@ -356,7 +351,7 @@ def _erfinv_internal(x: int256) -> int256:
 @internal
 @pure
 def _erfcinv_internal(x: int256) -> int256:
-    x_96: int256 = ((ONE_SIGNED - x) << POW) // ONE_SIGNED
+    x_96: int256 = unsafe_div(unsafe_sub(ONE_SIGNED, x) << POW, ONE_SIGNED)
     return self._erfinv_internal(x_96)
 
 
@@ -381,19 +376,12 @@ def erfcinv(x: int256) -> int256:
 @external
 @pure
 def ppf(x: int256, u: int256, o: int256) -> int256:
-    erfcinv_val: int256 = self._erfcinv_internal(2 * x)
-    
-    result: int256 = u - (o * SQRT2_WAD * erfcinv_val) // ONE_SQUARED
-    
-    return result
+    erfcinv_val: int256 = self._erfcinv_internal(unsafe_mul(2, x))
+    return unsafe_sub(u, unsafe_div(unsafe_mul(unsafe_mul(o, SQRT2_WAD), erfcinv_val), ONE_SQUARED))
 
 
 @external
 @pure
 def cdf(x: int256, u: int256, o: uint256) -> uint256:
-    diff: int256 = u - x
-    z: int256 = (diff * INV_SQRT2_96) // convert(o, int256)
-    
-    erfc_result: uint256 = self._erfc_internal(z)
-    
-    return erfc_result >> 1
+    z: int256 = unsafe_div(unsafe_mul(unsafe_sub(u, x), INV_SQRT2_96), convert(o, int256))
+    return self._erfc_internal(z) >> 1
