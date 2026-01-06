@@ -136,9 +136,9 @@ LN_OFFSET: constant(int256) = 60092017982973186173670277932162145959547225804907
 def _sqrt(x: uint256) -> uint256:
     if x == 0:
         return 0
-    
+
     z: uint256 = 181
-    
+
     r: uint256 = 0
     if x > 340282366920938463463374607431768211455:
         r = 128
@@ -148,21 +148,21 @@ def _sqrt(x: uint256) -> uint256:
         r = r + 32
     if (x >> r) > 65535:
         r = r + 16
-    
+
     z = z << (r >> 1)
-    z = (z * ((x >> r) + 65536)) >> 18
-    
-    z = (z + x // z) >> 1
-    z = (z + x // z) >> 1
-    z = (z + x // z) >> 1
-    z = (z + x // z) >> 1
-    z = (z + x // z) >> 1
-    z = (z + x // z) >> 1
-    z = (z + x // z) >> 1
-    
-    if x // z < z:
-        z = z - 1
-    
+    z = unsafe_mul(z, unsafe_add((x >> r), 65536)) >> 18
+
+    z = unsafe_add(z, unsafe_div(x, z)) >> 1
+    z = unsafe_add(z, unsafe_div(x, z)) >> 1
+    z = unsafe_add(z, unsafe_div(x, z)) >> 1
+    z = unsafe_add(z, unsafe_div(x, z)) >> 1
+    z = unsafe_add(z, unsafe_div(x, z)) >> 1
+    z = unsafe_add(z, unsafe_div(x, z)) >> 1
+    z = unsafe_add(z, unsafe_div(x, z)) >> 1
+
+    if unsafe_div(x, z) < z:
+        z = unsafe_sub(z, 1)
+
     return z
 
 
@@ -203,35 +203,35 @@ def _ln_wad(x: int256) -> int256:
     # x = x * 2^(159 - r) >> 159 = x << r >> 159
     x_reduced: int256 = convert((_x << r) >> 159, int256)
     
-    p: int256 = LN_P0 + x_reduced
-    p = ((p * x_reduced) >> 96) + LN_P1
-    p = ((p * x_reduced) >> 96) + LN_P2
-    p = ((p * x_reduced) >> 96) - LN_P3
-    p = ((p * x_reduced) >> 96) - LN_P4
-    p = ((p * x_reduced) >> 96) - LN_P5
-    p = (p * x_reduced) - (LN_P6 << 96)  # Leave in 2^192 basis
-    
+    p: int256 = unsafe_add(LN_P0, x_reduced)
+    p = unsafe_add(unsafe_mul(p, x_reduced) >> 96, LN_P1)
+    p = unsafe_add(unsafe_mul(p, x_reduced) >> 96, LN_P2)
+    p = unsafe_sub(unsafe_mul(p, x_reduced) >> 96, LN_P3)
+    p = unsafe_sub(unsafe_mul(p, x_reduced) >> 96, LN_P4)
+    p = unsafe_sub(unsafe_mul(p, x_reduced) >> 96, LN_P5)
+    p = unsafe_sub(unsafe_mul(p, x_reduced), LN_P6 << 96)  # Leave in 2^192 basis
+
     # q polynomial
-    q: int256 = x_reduced + LN_Q0
-    q = ((x_reduced * q) >> 96) + LN_Q1
-    q = ((x_reduced * q) >> 96) + LN_Q2
-    q = ((x_reduced * q) >> 96) + LN_Q3
-    q = ((x_reduced * q) >> 96) + LN_Q4
-    q = ((x_reduced * q) >> 96) + LN_Q5
-    q = ((x_reduced * q) >> 96) + LN_Q6
-    
+    q: int256 = unsafe_add(x_reduced, LN_Q0)
+    q = unsafe_add(unsafe_mul(x_reduced, q) >> 96, LN_Q1)
+    q = unsafe_add(unsafe_mul(x_reduced, q) >> 96, LN_Q2)
+    q = unsafe_add(unsafe_mul(x_reduced, q) >> 96, LN_Q3)
+    q = unsafe_add(unsafe_mul(x_reduced, q) >> 96, LN_Q4)
+    q = unsafe_add(unsafe_mul(x_reduced, q) >> 96, LN_Q5)
+    q = unsafe_add(unsafe_mul(x_reduced, q) >> 96, LN_Q6)
+
     # p / q (no scaling needed, p is already 2^96 too large)
-    p = p // q
-    
+    p = unsafe_div(p, q)
+
     # Apply scale factor: s * 5^18 * 2^96
-    p = LN_SCALE * p
-    
+    p = unsafe_mul(LN_SCALE, p)
+
     # Add ln(2) * k * 5^18 * 2^192 where k = 159 - r
     # Note: r can be > 159, so we compute as signed to avoid underflow
-    p = p + LN_LN2_SCALE * (159 - convert(r, int256))
-    
+    p = unsafe_add(p, unsafe_mul(LN_LN2_SCALE, unsafe_sub(159, convert(r, int256))))
+
     # Add ln(2^96 / 10^18) * 5^18 * 2^192
-    p = p + LN_OFFSET
+    p = unsafe_add(p, LN_OFFSET)
     
     # Base conversion: divide by 2^174 (shift right 174)
     result: int256 = p >> 174
@@ -248,23 +248,23 @@ def _erfc_internal(x: int256) -> uint256:
     y: uint256 = 0
     
     if z < ERFC_UPPER:
-        num: int256 = z - ERFC_NUM_0
-        num = ((num * z) >> POW) + ERFC_NUM_1
-        num = ((num * z) >> POW) - ERFC_NUM_2
-        num = ((num * z) >> POW) + ERFC_NUM_3
-        num = ((num * z) >> POW) - ERFC_NUM_4
-        num = ((num * z) >> POW) + ERFC_NUM_5
-        num = ((num * z) >> POW) + ERFC_NUM_6
-        num = ((num * z) >> POW) + ERFC_NUM_7
-        num = ((num * z) >> POW) - ERFC_NUM_8
-        num = ((num * z) >> POW) + ERFC_NUM_9
-        num = ((num * z) >> POW) - ERFC_NUM_10
-        
-        denom: int256 = z - ERFC_DEN_0
-        denom = ((denom * z) >> POW) + ERFC_DEN_1
-        denom = ((denom * z) >> POW) - ERFC_DEN_2
-        denom = ((denom * z) >> POW) + ERFC_DEN_3
-        
+        num: int256 = unsafe_sub(z, ERFC_NUM_0)
+        num = unsafe_add((unsafe_mul(num, z) >> POW), ERFC_NUM_1)
+        num = unsafe_sub((unsafe_mul(num, z) >> POW), ERFC_NUM_2)
+        num = unsafe_add((unsafe_mul(num, z) >> POW), ERFC_NUM_3)
+        num = unsafe_sub((unsafe_mul(num, z) >> POW), ERFC_NUM_4)
+        num = unsafe_add((unsafe_mul(num, z) >> POW), ERFC_NUM_5)
+        num = unsafe_add((unsafe_mul(num, z) >> POW), ERFC_NUM_6)
+        num = unsafe_add((unsafe_mul(num, z) >> POW), ERFC_NUM_7)
+        num = unsafe_sub((unsafe_mul(num, z) >> POW), ERFC_NUM_8)
+        num = unsafe_add((unsafe_mul(num, z) >> POW), ERFC_NUM_9)
+        num = unsafe_sub((unsafe_mul(num, z) >> POW), ERFC_NUM_10)
+
+        denom: int256 = unsafe_sub(z, ERFC_DEN_0)
+        denom = unsafe_add((unsafe_mul(denom, z) >> POW), ERFC_DEN_1)
+        denom = unsafe_sub((unsafe_mul(denom, z) >> POW), ERFC_DEN_2)
+        denom = unsafe_add((unsafe_mul(denom, z) >> POW), ERFC_DEN_3)
+
         y = convert((ERFC_SCALE * num) // denom, uint256)
     
     if x < 0:
@@ -282,70 +282,70 @@ def _erfinv_internal(x: int256) -> int256:
     y: int256 = 0
     
     if z < ERFINV_0_99:
-        num: int256 = z - ERFINV1_NUM_0
-        num = ((num * z) >> POW) - ERFINV1_NUM_1
-        num = ((num * z) >> POW) + ERFINV1_NUM_2
-        num = ((num * z) >> POW) - ERFINV1_NUM_3
-        num = ((num * z) >> POW) - ERFINV1_NUM_4
-        num = ((num * z) >> POW) + ERFINV1_NUM_5
-        num = ((num * z) >> POW) - ERFINV1_NUM_6
-        num = ((num * z) >> POW) + ERFINV1_NUM_7
-        
-        denom: int256 = z - ERFINV1_DEN_0
-        denom = ((denom * z) >> POW) + ERFINV1_DEN_1
-        denom = ((denom * z) >> POW) + ERFINV1_DEN_2
-        denom = ((denom * z) >> POW) - ERFINV1_DEN_3
-        denom = ((denom * z) >> POW) - ERFINV1_DEN_4
-        denom = ((denom * z) >> POW) + ERFINV1_DEN_5
-        denom = ((denom * z) >> POW) - ERFINV1_DEN_6
-        
-        y = (ERFINV1_SCALE * num) // denom
-        
+        num: int256 = unsafe_sub(z, ERFINV1_NUM_0)
+        num = unsafe_sub((unsafe_mul(num, z) >> POW), ERFINV1_NUM_1)
+        num = unsafe_add((unsafe_mul(num, z) >> POW), ERFINV1_NUM_2)
+        num = unsafe_sub((unsafe_mul(num, z) >> POW), ERFINV1_NUM_3)
+        num = unsafe_sub((unsafe_mul(num, z) >> POW), ERFINV1_NUM_4)
+        num = unsafe_add((unsafe_mul(num, z) >> POW), ERFINV1_NUM_5)
+        num = unsafe_sub((unsafe_mul(num, z) >> POW), ERFINV1_NUM_6)
+        num = unsafe_add((unsafe_mul(num, z) >> POW), ERFINV1_NUM_7)
+
+        denom: int256 = unsafe_sub(z, ERFINV1_DEN_0)
+        denom = unsafe_add((unsafe_mul(denom, z) >> POW), ERFINV1_DEN_1)
+        denom = unsafe_add((unsafe_mul(denom, z) >> POW), ERFINV1_DEN_2)
+        denom = unsafe_sub((unsafe_mul(denom, z) >> POW), ERFINV1_DEN_3)
+        denom = unsafe_sub((unsafe_mul(denom, z) >> POW), ERFINV1_DEN_4)
+        denom = unsafe_add((unsafe_mul(denom, z) >> POW), ERFINV1_DEN_5)
+        denom = unsafe_sub((unsafe_mul(denom, z) >> POW), ERFINV1_DEN_6)
+
+        y = unsafe_div(unsafe_mul(ERFINV1_SCALE, num), denom)
+
     elif z < ERFINV_0_9999:
-        num: int256 = z - ERFINV2_NUM_0
-        num = ((num * z) >> POW) - ERFINV2_NUM_1
-        num = ((num * z) >> POW) + ERFINV2_NUM_2
-        num = ((num * z) >> POW) - ERFINV2_NUM_3
-        
-        denom: int256 = z - ERFINV2_DEN_0
-        denom = ((denom * z) >> POW) + ERFINV2_DEN_1
-        denom = ((denom * z) >> POW) - ERFINV2_DEN_2
-        denom = ((denom * z) >> POW) + ERFINV2_DEN_3
-        
-        y = (ERFINV2_SCALE * num) // denom
+        num: int256 = unsafe_sub(z, ERFINV2_NUM_0)
+        num = unsafe_sub((unsafe_mul(num, z) >> POW), ERFINV2_NUM_1)
+        num = unsafe_add((unsafe_mul(num, z) >> POW), ERFINV2_NUM_2)
+        num = unsafe_sub((unsafe_mul(num, z) >> POW), ERFINV2_NUM_3)
+
+        denom: int256 = unsafe_sub(z, ERFINV2_DEN_0)
+        denom = unsafe_add((unsafe_mul(denom, z) >> POW), ERFINV2_DEN_1)
+        denom = unsafe_sub((unsafe_mul(denom, z) >> POW), ERFINV2_DEN_2)
+        denom = unsafe_add((unsafe_mul(denom, z) >> POW), ERFINV2_DEN_3)
+
+        y = unsafe_div(unsafe_mul(ERFINV2_SCALE, num), denom)
         
     else:
-        z_scaled: int256 = (z * ONE_SIGNED) // POW96_VAL
-        
+        z_scaled: int256 = unsafe_div(unsafe_mul(z, ONE_SIGNED), POW96_VAL)
+
         one_minus_z: uint256 = convert(ONE_SIGNED - z_scaled, uint256)
         if one_minus_z == 0:
             one_minus_z = 1
-        
+
         ln_val: int256 = self._ln_wad(convert(one_minus_z, int256))
         under_sqrt: int256 = LN2_WAD - ln_val
         if under_sqrt < 0:
             under_sqrt = 0
-        
+
         r: int256 = convert(self._sqrt(convert(under_sqrt, uint256) * ONE), int256)
-        r = r - 1600000000000000000
-        
-        num: int256 = (ERFINV3_NUM_0 * r) // ONE_SIGNED + ERFINV3_NUM_1
-        num = (num * r) // ONE_SIGNED + ERFINV3_NUM_2
-        num = (num * r) // ONE_SIGNED + ERFINV3_NUM_3
-        num = (num * r) // ONE_SIGNED + ERFINV3_NUM_4
-        num = (num * r) // ONE_SIGNED + ERFINV3_NUM_5
-        num = (num * r) // ONE_SIGNED + ERFINV3_NUM_6
-        num = (num * r) // ONE_SIGNED + ERFINV3_NUM_7
-        
-        denom: int256 = (ERFINV3_DEN_0 * r) // ONE_SIGNED + ERFINV3_DEN_1
-        denom = (denom * r) // ONE_SIGNED + ERFINV3_DEN_2
-        denom = (denom * r) // ONE_SIGNED + ERFINV3_DEN_3
-        denom = (denom * r) // ONE_SIGNED + ERFINV3_DEN_4
-        denom = (denom * r) // ONE_SIGNED + ERFINV3_DEN_5
-        denom = (denom * r) // ONE_SIGNED + ERFINV3_DEN_6
-        denom = (denom * r) // ONE_SIGNED + ERFINV3_DEN_7
-        
-        y = (num * ERFINV3_SCALE) // denom
+        r = unsafe_sub(r, 1600000000000000000)
+
+        num: int256 = unsafe_add(unsafe_div(unsafe_mul(ERFINV3_NUM_0, r), ONE_SIGNED), ERFINV3_NUM_1)
+        num = unsafe_add(unsafe_div(unsafe_mul(num, r), ONE_SIGNED), ERFINV3_NUM_2)
+        num = unsafe_add(unsafe_div(unsafe_mul(num, r), ONE_SIGNED), ERFINV3_NUM_3)
+        num = unsafe_add(unsafe_div(unsafe_mul(num, r), ONE_SIGNED), ERFINV3_NUM_4)
+        num = unsafe_add(unsafe_div(unsafe_mul(num, r), ONE_SIGNED), ERFINV3_NUM_5)
+        num = unsafe_add(unsafe_div(unsafe_mul(num, r), ONE_SIGNED), ERFINV3_NUM_6)
+        num = unsafe_add(unsafe_div(unsafe_mul(num, r), ONE_SIGNED), ERFINV3_NUM_7)
+
+        denom: int256 = unsafe_add(unsafe_div(unsafe_mul(ERFINV3_DEN_0, r), ONE_SIGNED), ERFINV3_DEN_1)
+        denom = unsafe_add(unsafe_div(unsafe_mul(denom, r), ONE_SIGNED), ERFINV3_DEN_2)
+        denom = unsafe_add(unsafe_div(unsafe_mul(denom, r), ONE_SIGNED), ERFINV3_DEN_3)
+        denom = unsafe_add(unsafe_div(unsafe_mul(denom, r), ONE_SIGNED), ERFINV3_DEN_4)
+        denom = unsafe_add(unsafe_div(unsafe_mul(denom, r), ONE_SIGNED), ERFINV3_DEN_5)
+        denom = unsafe_add(unsafe_div(unsafe_mul(denom, r), ONE_SIGNED), ERFINV3_DEN_6)
+        denom = unsafe_add(unsafe_div(unsafe_mul(denom, r), ONE_SIGNED), ERFINV3_DEN_7)
+
+        y = unsafe_div(unsafe_mul(num, ERFINV3_SCALE), denom)
     
     if x < 0:
         y = -y
