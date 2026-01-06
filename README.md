@@ -1,6 +1,6 @@
 # vygauss
 
-Highly optimized Vyper library for statistical functions with error < 1e-8, including `erfc`, `erfinv`, `erfcinv`, `ppf`, and `cdf`.
+Vyper library for statistical functions with error < 1e-8, including `erfc`, `erfinv`, `erfcinv`, `ppf`, and `cdf`.
 
 Ported from [solgauss](https://github.com/cairoeth/solgauss) (Solidity).
 
@@ -36,45 +36,51 @@ Cumulative distribution function of normal distribution.
 
 ## Gas Benchmarks
 
-Run benchmarks: `python3 scripts/gas_benchmark.py`
+Run: `python3 scripts/gas_benchmark.py`
 
-### Comparison: vygauss (Vyper) vs solgauss (Solidity)
+### Comparison with solgauss (Solidity)
 
-| Function | vygauss (min) | vygauss (max) | solgauss (min) | solgauss (max) | Overhead |
-|----------|---------------|---------------|----------------|----------------|----------|
-| erfc     | 2688          | 2736          | 649            | 693            | ~4x      |
-| erfinv   | 1643          | 7670          | 647            | 1670           | ~2.5-4.5x|
-| erfcinv  | 2860          | 7774          | 710            | 723            | ~4-10x   |
-| cdf      | 2997          | 3045          | 731            | 754            | ~4x      |
-| ppf      | 2105          | 3218          | 814            | 859            | ~2.5-4x  |
+titanoboa measures external calls (~118 gas overhead). Values below are pure computation costs (total - 118). See `BENCHMARKING.md` for methodology.
 
-### vygauss Detailed Benchmarks
+| Function | solgauss | std | std vs sol | Venom | Venom vs sol |
+|----------|----------|-----|------------|-------|--------------|
+| erfc     | 688      | 912 | +33%       | 617   | **-10%**     |
+| erfcinv  | 828      | 1291| +56%       | 893   | +8%          |
+| cdf      | 610      | 1234| +102%      | 866   | +42%         |
+| ppf      | 2001     | 1222| -39%       | 933   | **-53%**     |
 
-| Function              | min  | max  | avg  | median |
-|-----------------------|------|------|------|--------|
-| erfc                  | 2688 | 2736 | 2702 | 2688   |
-| erfinv (Range 1)      | 2717 | 2756 | 2723 | 2717   |
-| erfinv (Range 2)      | 1643 | 1682 | 1662 | 1662   |
-| erfinv (Range 3)      | 7631 | 7670 | 7638 | 7631   |
-| erfcinv               | 2860 | 7774 | 3578 | 2899   |
-| cdf                   | 2997 | 3045 | 3024 | 3045   |
-| ppf                   | 2105 | 3218 | 2888 | 3179   |
+### Detailed Benchmarks (Venom, total gas including call overhead)
 
-The gas overhead compared to Solidity is due to:
-- Vyper's lack of inline assembly support
-- Additional safety checks in Vyper
-- Less aggressive compiler optimizations
+| Function | min | max | avg | median |
+|----------|-----|-----|-----|--------|
+| erfc | 727 | 755 | 735 | 727 |
+| erfinv (Range 1) | 675 | 705 | 680 | 675 |
+| erfinv (Range 2) | 572 | 602 | 587 | 587 |
+| erfinv (Range 3) | 2265 | 2295 | 2271 | 2265 |
+| erfcinv | 771 | 2361 | 1011 | 801 |
+| cdf | 968 | 996 | 984 | 996 |
+| ppf | 965 | 1098 | 1051 | 1068 |
 
-For gas-critical applications, consider using [solgauss](https://github.com/cairoeth/solgauss). For Vyper-native projects prioritizing code readability and safety, vygauss provides functionally equivalent results.
+### Optimization Techniques
+
+1. **`unsafe_*` operations** - Bypass Vyper's overflow checks where input bounds are proven safe (matches Solidity assembly semantics). 56-66% reduction from baseline.
+
+2. **Venom compiler** (`--experimental-codegen`) - IR-level optimizations that reduce redundant checks. Additional 22-30% reduction.
+
+```python
+import boa
+gaussian = boa.loads(source, compiler_args={'experimental_codegen': True})
+```
+
+For Vyper projects, vygauss with Venom provides competitive gas performance. For maximum efficiency in multi-language systems, use [solgauss](https://github.com/cairoeth/solgauss).
 
 ## Testing
 
 ```sh
-cd vygauss
 python3 -m pytest tests/ -v
 ```
 
-Tests use [mpmath](https://mpmath.org/) for high-precision reference implementations.
+Tests use [mpmath](https://mpmath.org/) for high-precision reference values.
 
 ## Acknowledgements
 

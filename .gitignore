@@ -30,3 +30,7 @@ build/
 # Misc
 .DS_Store
 *.log
+
+# Agent files
+.agent-files/
+scratch/
