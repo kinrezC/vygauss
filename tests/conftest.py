@@ -9,7 +9,6 @@ def compiled_contract():
         ["vyper", "-f", "abi,bytecode", "src/gaussian.vy"],
         capture_output=True,
         text=True,
-        cwd="/home/mat/workspace/gauss-lib/vygauss",
     )
     if result.returncode != 0:
         raise RuntimeError(f"Compilation failed: {result.stderr}")
